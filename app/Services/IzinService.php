@@ -22,10 +22,10 @@ class IzinService
 
     public function ajukanIzin(int $userId, array $data): array
     {
-        $tipe        = $data['tipe'];
-        $mulai       = Carbon::parse($data['tanggal_mulai']);
-        $selesai     = Carbon::parse($data['tanggal_selesai']);
-        $durasiHari  = $mulai->diffInDays($selesai) + 1;
+        $tipe = $data['tipe'];
+        $mulai = Carbon::parse($data['tanggal_mulai']);
+        $selesai = Carbon::parse($data['tanggal_selesai']);
+        $durasiHari = $mulai->diffInDays($selesai) + 1;
 
         $maxHari = match($tipe) {
             'dinas'   => self::MAX_HARI_DINAS,

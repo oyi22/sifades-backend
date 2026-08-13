@@ -11,12 +11,12 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('nama_lengkap');
-            $table->string('nik', 16)->unique();
+            $table->string('nik')->unique();
             $table->enum('jenis_kelamin', ['L', 'P']);
             $table->text('alamat');
             $table->string('tempat_lahir');
             $table->date('tanggal_lahir'); 
-            $table->enum('jabatan', ['sekdes', 'kaur', 'pelayanan', 'karyawan']);
+            $table->enum('jabatan', ['sekdes', 'kaur', 'pelayanan', 'karyawan', 'kamituwo', 'kades', 'pj']);
             $table->string('no_wa')->nullable();
             $table->timestamps();
             $table->softDeletes();

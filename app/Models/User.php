@@ -18,7 +18,8 @@ class User extends Model
         'tanggal_lahir',
         'jabatan',
         'no_wa', 
-        'foto_profile'
+        'foto_profile',
+        'enrollment_enable',
     ];
 
     protected function casts(): array
@@ -47,16 +48,6 @@ class User extends Model
         return $this->hasOne(Akun::class);
     }
 
-    public function enrollments()
-    {
-        return $this->hasMany(Enrollment::class);
-    }
-
-    public function enrollmentAktif()
-    {
-        return $this->hasOne(Enrollment::class)->where('is_verified', true)->latest();
-    }
-
     public function absensis()
     {
         return $this->hasMany(Absensi::class);
@@ -77,11 +68,6 @@ class User extends Model
         return $this->hasOne(Izin::class)->whereDate('tanggal', today());
     }
  
-    public function sudahEnrollment(): bool
-    {
-        return $this->enrollments()->where('is_verified', true)->exists();
-    }
-
     public function gagalLiveness(): int
     {
         return $this->enrollmentAktif?->gagal_liveness ?? 0;
@@ -92,4 +78,11 @@ class User extends Model
         return asset('storage/' . $this->foto_profile);
     }
 
+    public function embedding(){
+        return $this->hasOne(Embedding::class);
+    }
+    public function notifikasiLogs()
+    {
+        return $this->hasMany(NotifikasiLog::class);
+    }
 }

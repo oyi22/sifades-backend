@@ -1,124 +1,162 @@
 <?php
+
 namespace App\Services;
 
-use App\Models\Enrollment;
+use App\Models\Enrollments;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 
 class EnrollmentService
-{
-    private string $aiUrl;
-
-    public function __construct()
+{ 
+    public function checkStatus(Request $request)
     {
-        $this->aiUrl = config('services.ai.url', 'http://localhost:8001');
-    }
+        $akun = $request->user();
+        $user = $akun->user;
 
-    public function getStatus(int $userId, int $sesi): array
-    {
-        $res = Http::get("{$this->aiUrl}/enrollment/status/{$userId}/{$sesi}");
-        return $res->json();
-    }
-
-    public function simpanFrame(int $userId, int $sesi, string $pose, string $frame): array
-    {
-        $res = Http::post("{$this->aiUrl}/enrollment/frame", [
-            'user_id' => $userId,
-            'sesi'    => $sesi,
-            'pose'    => $pose,
-            'frame'   => $frame,
-        ]);
-
-        if (!$res->successful()) {
-            throw new \Exception('AI service error: ' . $res->body());
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'User tidak ditemukan'], 404);
         }
 
-        return $res->json();
-    }
+        $userId = $user->id;
 
-    public function finalize(int $userId, int $sesi): Enrollment
-    { 
-        $res = Http::post("{$this->aiUrl}/enrollment/finalize", [
-            'user_id' => $userId,
-            'sesi'    => $sesi,
+        $hasEmbedding  = DB::table('embedding')->where('user_id', $userId)->exists();
+        $pendingExists = Enrollments::where('user_id', $userId)->where('status', 'pending')->exists();
+
+        return response()->json([
+            'success'  => true,
+            'enrollment_enabled' => (bool) $user->enrollment_enable,
+            'has_embedding'      => $hasEmbedding,
+            'pending_enrollment' => $pendingExists,
         ]);
+    }
+    public function store(Request $request)
+    {
+        $akun = $request->user();
+        $user = $akun->user; 
 
-        if (!$res->successful()) {
-            throw new \Exception('Gagal generate embedding: ' . $res->body());
+        if (!$user) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
         }
 
-        $data = $res->json();
- 
-        $enrollment = Enrollment::updateOrCreate(
-            ['user_id' => $userId, 'sesi' => $sesi],
-            [
-                'face_embedding' => $data['embedding'],
-                'status'         => 'selesai',
-                'path_senyum'    => "enrollments/{$userId}/sesi_{$sesi}/senyum",
-                'path_kedip'     => "enrollments/{$userId}/sesi_{$sesi}/kedip",
-                'path_kanan'     => "enrollments/{$userId}/sesi_{$sesi}/kanan",
-                'path_kiri'      => "enrollments/{$userId}/sesi_{$sesi}/kiri",
-            ]
-        );
- 
-        $sesiSelesai = Enrollment::where('user_id', $userId)
-            ->where('status', 'selesai')
-            ->count();
+        $request->validate([
+            'video' => 'required|file|mimetypes:video/webm,video/mp4,video/x-matroska|max:51200',
+        ]);
 
-        if ($sesiSelesai >= 2) { 
-            $emb1 = Enrollment::where('user_id', $userId)->where('sesi', 1)->value('face_embedding');
-            $emb2 = Enrollment::where('user_id', $userId)->where('sesi', 2)->value('face_embedding');
+        if (!$user->enrollment_enable) {
+            return response()->json(['message' => 'Enrollment belum diizinkan admin'], 403);
+        }
 
-            $merged = array_map(
-                fn($a, $b) => ($a + $b) / 2,
-                $emb1, $emb2
-            );
+        $alreadyPending = Enrollments::where('user_id', $user->id)->where('status', 'pending')->exists();
+
+        if ($alreadyPending) {
+            return response()->json(['message' => 'Enrollment sedang menunggu review admin'], 409);
+        }
+
+        $path = $request->file('video')->store("enrollments/{$user->id}", 'local');
+
+        $enrollment = Enrollments::create([
+            'user_id'    => $user->id,
+            'vidio_path' => $path,
+            'status'     => 'pending',
+        ]);
+
+        return response()->json([
+            'message'       => 'Enrollment berhasil diupload, menunggu review admin',
+            'enrollment_id' => $enrollment->id,
+        ], 201);
+    }
  
+    public function index()
+    {
+        $enrollments = Enrollments::with('user:id,nama_lengkap,jabatan')->orderBy('created_at', 'desc')->paginate(15);
+
+        return response()->json($enrollments);
+    } 
+
+    public function approve(Request $request, Enrollments $enrollment)
+    {
+        if ($enrollment->status !== 'pending') {
+            return response()->json(['message' => 'Enrollment sudah diproses'], 409);
+        }
+
+        $videoFullPath = storage_path('app/' . $enrollment->vidio_path);  
+
+        $videoFullPath = storage_path('app/private/' . $enrollment->vidio_path);
+        if (!file_exists($videoFullPath)) {
+            $videoFullPath = storage_path('app/' . $enrollment->vidio_path);
+        }  
+
+        if (!file_exists($videoFullPath)) {
+        return response()->json(['message' => 'File video tidak ditemukan'], 404);
+        }
+        $mlServiceUrl = config('services.ml.url', env('ML_SERVICE_URL', 'http://127.0.0.1:5000'));
+
+        try {
+        $response = Http::timeout(120)
+            ->asMultipart()
+            ->attach('video', file_get_contents($videoFullPath), basename($videoFullPath))
+            ->attach('user_id', (string) $enrollment->user_id)
+            ->post("{$mlServiceUrl}/api/enrollment/process");
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'message' => 'FastAPI gagal memproses video',
+                    'status'  => $response->status(),
+                    'detail'  => $response->json(),
+                    'body'    => $response->body(),
+                ], 500);
+            }
+
+            $result = $response->json();
+
             $enrollment->update([
-                'face_embedding' => $merged,
-                'is_verified'    => true,
+                'status'        => 'setuju',
+                'catatan_admin' => $request->input('catatan', null),
             ]);
+
+            User::where('id', $enrollment->user_id)->update(['enrollment_enable' => false]);
+
+            return response()->json([
+                'message'          => 'Enrollment disetujui dan embedding berhasil dibuat',
+                'embeddings_saved' => $result['embeddings_saved'] ?? null,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal menghubungi ML service',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }   
+ 
+    public function reject(Request $request, Enrollments $enrollment)
+    {
+        if ($enrollment->status !== 'pending') {
+            return response()->json(['message' => 'Enrollment sudah diproses'], 409);
         }
 
-        return $enrollment;
+        $enrollment->update([
+            'status'        => 'tolak',
+            'catatan_admin' => $request->input('catatan', 'Ditolak oleh admin'),
+        ]);
+
+        Storage::disk('local')->delete($enrollment->vidio_path);
+
+        return response()->json(['message' => 'Enrollment ditolak']);
     }
-
-    public function getFinalEmbedding(int $userId): ?array
+ 
+    public function toggleEnrollment(Request $request, User $user)
     {
-        $enrollment = Enrollment::where('user_id', $userId)
-            ->where('is_verified', true)
-            ->latest()
-            ->first();
+        $enable = $request->boolean('enable');
 
-        return $enrollment?->face_embedding;
-    }
+        $user->update(['enrollment_enable' => $enable]);
 
-    public function tambahGagalLiveness(int $userId): int
-    {
-        $enrollment = Enrollment::where('user_id', $userId)
-            ->where('is_verified', true)
-            ->latest()
-            ->first();
-
-        if (!$enrollment) return 0;
-
-        $enrollment->increment('gagal_liveness');
-        return $enrollment->gagal_liveness;
-    }
-
-    public function resetGagalLiveness(int $userId): void
-    {
-        Enrollment::where('user_id', $userId)
-            ->where('is_verified', true)
-            ->update(['gagal_liveness' => 0]);
-    }
-
-    public function resetEnrollment(int $userId): void
-    {
-        // Reset di AI service
-        Http::delete("{$this->aiUrl}/enrollment/reset/{$userId}");
-
-        // Reset di DB
-        Enrollment::where('user_id', $userId)->delete();
+        return response()->json([
+            'message'            => $enable ? 'Enrollment dibuka' : 'Enrollment ditutup',
+            'enrollment_enabled' => $enable,
+        ]);
     }
 }

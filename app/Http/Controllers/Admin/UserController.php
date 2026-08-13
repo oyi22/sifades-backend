@@ -1,11 +1,12 @@
 <?php
-// app/Http/Controllers/Admin/UserController.php
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\UserService;
+use App\Services\RiwayatService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -38,7 +39,7 @@ class UserController extends Controller
             'alamat' => 'required|string',
             'tempat_lahir' => 'required|string',
             'tanggal_lahir' => 'required|date',
-            'jabatan' => 'required|in:sekdes,kaur,pelayanan,karyawan',
+            'jabatan' => 'required|in:sekdes,kaur,pelayanan,karyawan,kamituwo,kades,pj',
             'no_wa' => 'nullable|string|max:15',
         ]);
 
@@ -55,12 +56,14 @@ class UserController extends Controller
     {
         $data = $request->validate([
         'nama_lengkap' => 'required|string|max:255',
-        'nik' => 'required|string|size:16|unique:users,nik',
+        'nik' =>  [
+            'required', 'string', 'size:16', Rule::unique('users', 'nik')->ignore($id)
+        ],
         'jenis_kelamin' => 'required|in:L,P',
         'alamat' => 'required|string',
         'tempat_lahir' => 'required|string',
         'tanggal_lahir' => 'required|date',
-        'jabatan' => 'required|in:sekdes,kaur,pelayanan,karyawan',
+        'jabatan' => 'required|in:sekdes,kaur,pelayanan,karyawan,kamituwo,kades,pj',
         'no_wa' => 'nullable|string|max:15',
         ]);
 
@@ -96,7 +99,7 @@ class UserController extends Controller
 
     public function uploadFoto(Request $request, int $id){
         $request->validate([
-            'foto' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'foto' => 'required|image|mimes:jpg,jpeg,png|max:10240',
         ]);
 
         $user = $this->service->uploadFotoProfile($id, $request->file('foto'));
@@ -119,6 +122,24 @@ class UserController extends Controller
             'data' => [
                 'foto_profile_url' => null,
             ],
+        ]);
+    }
+
+    public function riwayat(Request $request, int $id)
+    {
+        $query = \App\Models\RiwayatAktivitas::where('user_id', $id)
+            ->where('dihapus', false)
+            ->orderByDesc('terjadi_pada');
+
+        if ($request->filled('tipe')) {
+            $query->where('tipe', $request->tipe);
+        }
+
+        $data = $query->paginate($request->input('per_page', 15));
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
         ]);
     }
 }

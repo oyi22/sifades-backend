@@ -5,22 +5,21 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{ 
+{
     public function up(): void
     {
-        Schema::create('izin_quotas', function (Blueprint $table) {
+        Schema::create('enrollments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->unsignedTinyInteger('bulan');
-            $table->year('tahun');
-            $table->unsignedTinyInteger('sisa_slot')->default(3);
+            $table->string('vidio_path');
+            $table->enum('status', ['pending', 'setuju', 'tolak'])->default('pending');
+            $table->text('catatan_admin')->nullable();
             $table->timestamps();
-            $table->unique(['user_id', 'bulan', 'tahun']);
         });
     }
- 
+
     public function down(): void
     {
-        Schema::dropIfExists('izin_quotas');
+        Schema::dropIfExists('enrollments');
     }
 };

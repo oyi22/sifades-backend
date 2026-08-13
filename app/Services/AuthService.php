@@ -18,6 +18,7 @@ class AuthService
             ]);
         }
 
+        $admin->tokens()->delete();
         $token = $admin->createToken('admin-token', ['role:admin'])->plainTextToken;
 
         return [
@@ -46,6 +47,8 @@ class AuthService
         }
 
         $akun->update(['last_login' => now()]);
+        
+        $akun->tokens()->delete();
         $token = $akun->createToken('user-token', ['role:user'])->plainTextToken;
 
         $user = $akun->user;
@@ -57,9 +60,7 @@ class AuthService
                 'nama_lengkap' => $user->nama_lengkap,
                 'nik' => $user->nik,
                 'jabatan' => $user->jabatan,
-                'alamat'  => $user->alamat,
-                'sudah_enrollment' => $user->sudahEnrollment(),
-                'gagal_liveness' => $user->gagalLiveness(),
+                'alamat'  => $user->alamat,  
                 'role'  => 'user',
             ],
         ];

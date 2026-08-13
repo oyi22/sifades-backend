@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 class RiwayatController extends Controller
 {
     public function __construct(protected RiwayatService $service) {}
-
     public function index(Request $request)
     {
         $userId  = $request->user()->user->id;

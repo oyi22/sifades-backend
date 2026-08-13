@@ -17,7 +17,7 @@ class NotifikasiLog extends Model
 
     protected $casts = [
         'terkirim' => 'boolean',
-        'dikirm_pada' => 'datetime',
+        'dikirim_pada' => 'datetime',
     ];
 
     public function izin (){

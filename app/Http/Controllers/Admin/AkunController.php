@@ -18,17 +18,11 @@ class AkunController extends Controller
             $query->where('username', 'like', '%' . $request->search . '%');
         }
 
-        $data = $query->latest()->paginate(10);
+        $data = $query->orderBy('user_id', 'asc')->get();
 
         return  response()->json([
             'success' => true,
-            'data' => [
-                'data' => $data->items(),
-                'current_page' => $data->currentPage(),
-                'last_page' => $data->lastPage(),
-                'per_page' => $data->perPage(),
-                'total' => $data->total()
-            ]
+            'data' => $data,
         ]);
     }
 

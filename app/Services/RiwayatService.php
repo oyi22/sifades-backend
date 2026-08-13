@@ -139,4 +139,17 @@ class RiwayatService
             'notif_wa'   => (clone $base)->where('tipe', 'notif_wa')->count(),
         ];
     }
+
+    public function getByUserAdmin(int $userId, array $filter = [])
+    {
+        $query = \App\Models\RiwayatAktivitas::where('user_id', $userId)
+            ->where('dihapus', false)
+            ->orderByDesc('terjadi_pada');
+
+        if (!empty($filter['tipe'])) {
+            $query->where('tipe', $filter['tipe']);
+        }
+
+        return $query->paginate($filter['per_page'] ?? 15);
+    }
 }

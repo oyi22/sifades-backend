@@ -5,10 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
+{ 
     public function up(): void
     {
         Schema::create('riwayat_aktivitas', function (Blueprint $table) {
@@ -29,10 +26,7 @@ return new class extends Migration
              $table->index(['user_id', 'dihapus', 'terjadi_pada']);
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
+ 
     public function down(): void
     {
         Schema::dropIfExists('riwayat_aktivitas');

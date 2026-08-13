@@ -9,14 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('foto_profile')->nullable()->after('no_wa');
+            $table->boolean('enrollment_enable')->default(false)->after('no_wa');
         });
     }
  
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('foto_profile');
+            $table->boolean('enrollment_enable');
         });
     }
 };

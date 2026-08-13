@@ -60,7 +60,6 @@ class IzinController extends Controller
             'data' => $this->service->getRiwayatUser($userId),
         ]);
     }
-
     public function sisaSlot (Request $request){
         $user = $request->user();
         $userId = $user->user->id ?? $user->id;

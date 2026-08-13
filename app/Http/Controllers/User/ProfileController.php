@@ -23,7 +23,7 @@ class ProfileController extends Controller
 
     public function uploadFoto(Request $request) {
         $request->validate([
-            'foto' => 'required|image|mimes:jpg,png,jpeg|max:2048',
+            'foto' => 'required|image|mimes:jpg,png,jpeg|max:10240',
         ]);
 
         $akun = Auth::user();

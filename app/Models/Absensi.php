@@ -20,6 +20,14 @@ class Absensi extends Model
         'foto_absensi',
         'skor_kepercayaan',
         'notif_wa_terkirim',
+        'jam_pulang', 
+        'latitude_pulang', 
+        'longitude_pulang',
+        'alamat_lokasi_pulang', 
+        'jarak_dari_kantor_pulang',
+        'foto_pulang', 
+        'skor_kepercayaan_pulang', 
+        'notif_wa_pulang_terkirim',
     ];
 
     protected function casts(){

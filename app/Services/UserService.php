@@ -11,7 +11,7 @@ class UserService
 {
     public function getAll(array $filters = [])
     {
-        $query = User::with('akun');
+        $query = User::query();
 
         if (!empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
@@ -23,7 +23,7 @@ class UserService
             $query->where('jabatan', $filters['jabatan']);
         } 
 
-        return $query->latest()->paginate(10);
+        return $query->orderBy('id', 'asc')->get();
     }
 
     public function getById(int $id): User

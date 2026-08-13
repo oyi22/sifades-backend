@@ -25,6 +25,9 @@ return [
     'fonnte' => [
         'url' => env('WHATSAPP_URL'),
         'token' => env('WHATSAPP_KEY'),
+        'jeda_min_detik' => env('FONNTE_JEDA_MIN'),
+        'jeda_max_detik' => env('FONNTE_JEDA_MAX'),
+        'limit_harian' => env('FONNTE_LIMIT_HARIAN')
     ],
     
     'ai' => [

@@ -98,4 +98,43 @@ class RiwayatAktivitas extends Model
             'dihapus' => false,
         ]);
     }
-}
+
+    public function catatAbsensi(int $userId, $absensi)
+    {
+        return self::create([
+            'user_id'        => $userId,
+            'tipe'           => 'absensi',
+            'judul'          => 'Absensi Masuk',
+            'deskripsi'      => 'Berhasil melakukan absensi pada ' . now()->format('H:i'),
+            'status'         => 'hadir',
+            'referensi_tipe' => 'absensi',
+            'referensi_id'   => $absensi->id,
+            'meta'           => [
+                'jam_masuk'     => $absensi->jam_masuk,
+                'lokasi'        => $absensi->alamat_lokasi,
+                'jarak_meter'   => $absensi->jarak_dari_kantor,
+                'skor'          => $absensi->skor_kepercayaan,
+            ],
+            'terjadi_pada'   => now(),
+            'dihapus'        => false,
+        ]);
+    }
+    public function catatNotifWa(int $userId, string $tipe, string $pesan, bool $terkirim, ?int $referensiId = null, ?string $referensiTipe = null)
+    {
+        return self::create([
+            'user_id'        => $userId,
+            'tipe'           => 'notif_wa',
+            'judul'          => $terkirim ? 'Notifikasi WA Terkirim' : 'Notifikasi WA Gagal',
+            'deskripsi'      => $pesan,
+            'status'         => $terkirim ? 'terkirim' : 'gagal',
+            'referensi_tipe' => $referensiTipe,
+            'referensi_id'   => $referensiId,
+            'meta'           => [
+                'terkirim' => $terkirim,
+                'tipe_notif' => $tipe,
+            ],
+            'terjadi_pada'   => now(),
+            'dihapus'        => false,
+        ]);
+    }
+    }

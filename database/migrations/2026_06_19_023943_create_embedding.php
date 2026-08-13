@@ -8,19 +8,16 @@ return new class extends Migration
 { 
     public function up(): void
     {
-        Schema::create('izin_quotas', function (Blueprint $table) {
+        Schema::create('embedding', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->unsignedTinyInteger('bulan');
-            $table->year('tahun');
-            $table->unsignedTinyInteger('sisa_slot')->default(3);
+            $table->longText('face_embeddings');
             $table->timestamps();
-            $table->unique(['user_id', 'bulan', 'tahun']);
         });
     }
  
     public function down(): void
     {
-        Schema::dropIfExists('izin_quotas');
+        Schema::dropIfExists('embedding');
     }
 };
